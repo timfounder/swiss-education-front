@@ -520,6 +520,7 @@
 
     function validate() {
         if (finalPayload) return;
+        safeVibrate('light');
 
         const fields = ['fullName', 'age', 'phone', 'currentStudy', 'gpa', 'certType',
                        'fieldOfStudy', 'country', 'degreeLevel', 'budget', 'whenStart', 'motivation'];
@@ -561,17 +562,40 @@
         try {
             const hf = tg.HapticFeedback;
             if (!hf) return;
-            if (type === 'tick') { if (hf.selectionChanged) hf.selectionChanged(); }
+            if (type === 'tick') {
+                if (hf.selectionChanged) hf.selectionChanged();
+            }
             else if (type === 'success') {
+                // Премиум паттерн: нотификация + тройной импакт
                 if (hf.notificationOccurred) hf.notificationOccurred('success');
-                setTimeout(() => { try { hf.impactOccurred('heavy'); } catch(e){} }, 200);
-                setTimeout(() => { try { hf.impactOccurred('medium'); } catch(e){} }, 400);
+                setTimeout(() => { try { hf.impactOccurred('heavy'); } catch(e){} }, 150);
+                setTimeout(() => { try { hf.impactOccurred('heavy'); } catch(e){} }, 300);
+                setTimeout(() => { try { hf.impactOccurred('medium'); } catch(e){} }, 500);
             }
             else if (type === 'warning') {
                 if (hf.notificationOccurred) hf.notificationOccurred('warning');
-                setTimeout(() => { try { hf.impactOccurred('medium'); } catch(e){} }, 250);
+                setTimeout(() => { try { hf.impactOccurred('medium'); } catch(e){} }, 200);
+                setTimeout(() => { try { hf.impactOccurred('light'); } catch(e){} }, 400);
             }
-            else if (type === 'error') { if (hf.notificationOccurred) hf.notificationOccurred('error'); }
+            else if (type === 'error') {
+                if (hf.notificationOccurred) hf.notificationOccurred('error');
+                setTimeout(() => { try { hf.impactOccurred('rigid'); } catch(e){} }, 200);
+            }
+            else if (type === 'soft') {
+                if (hf.impactOccurred) hf.impactOccurred('soft');
+            }
+            else if (type === 'light') {
+                if (hf.impactOccurred) hf.impactOccurred('light');
+            }
+            else if (type === 'medium') {
+                if (hf.impactOccurred) hf.impactOccurred('medium');
+            }
+            else if (type === 'heavy') {
+                if (hf.impactOccurred) hf.impactOccurred('heavy');
+            }
+            else if (type === 'rigid') {
+                if (hf.impactOccurred) hf.impactOccurred('rigid');
+            }
         } catch (e) {}
     }
 
@@ -716,11 +740,7 @@
 
     // === MAIN BUTTON HANDLER ===
     tg.MainButton.onClick(() => {
-        if (finalPayload) {
-            // Second click — open consultation
-            tg.openTelegramLink('https://t.me/said_swisss');
-            return;
-        }
+        if (finalPayload) return; // Уже отправлено
 
         const name = document.getElementById('fullName').value.trim();
         const age = document.getElementById('age').value;
@@ -755,12 +775,15 @@
         };
 
         // Send to Google Sheets
-        try {
-            var xhr = new XMLHttpRequest();
-            xhr.open("POST", GOOGLE_SHEET_URL, true);
-            xhr.setRequestHeader("Content-Type", "text/plain;charset=utf-8");
-            xhr.send(JSON.stringify(finalPayload));
-        } catch(e) {}
+            // Отправка в Google Sheets
+            try {
+                fetch(GOOGLE_SHEET_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify(finalPayload)
+                });
+            } catch(e) { console.log("Sheets error:", e); }
 
         // Send data to bot
         // sendData убран — он закрывает WebApp. Данные идут через Google Sheets.
@@ -834,9 +857,8 @@
         const circumference = 80 * 2 * Math.PI;
         const circle = document.getElementById('animCircle');
         let current = 0;
-        let speed = 25;
 
-        const animInterval = setInterval(() => {
+        function animateStep() {
             current++;
             safeVibrate('tick');
             document.getElementById('ringNum').innerHTML = current + '<span>%</span>';
@@ -848,12 +870,13 @@
             else circle.style.stroke = 'var(--gold)';
 
             if (current >= prob) {
-                clearInterval(animInterval);
-
-                // Show fade-ups
+                // Show fade-ups with haptic
                 setTimeout(() => {
                     document.querySelectorAll('.fade-up').forEach((el, i) => {
-                        setTimeout(() => el.classList.add('show'), i * 150);
+                        setTimeout(() => {
+                            el.classList.add('show');
+                            safeVibrate('soft');
+                        }, i * 150);
                     });
                 }, 200);
 
@@ -873,25 +896,23 @@
                         setTimeout(() => confetti({ particleCount: 80, spread: 100, origin: { y: 0.5 } }), 300);
                     }} catch(e){}
                     safeVibrate('success');
+                } else if (prob >= 40) {
+                    safeVibrate('warning');
                 } else {
-                    try {
-                        let audio = new Audio("https://raw.githubusercontent.com/timfounder/abiturient/main/atlet.mp3");
-                        audio.volume = 0.7; audio.play().catch(()=>{});
-                    } catch(e){}
-                    safeVibrate(prob > 40 ? 'warning' : 'error');
+                    safeVibrate('error');
                 }
 
-                // Show CTA button after results
-                setTimeout(() => {
-                    const btnText = translations.resultBtn[currentLang];
-                    tg.MainButton.setParams({ text: btnText, color: "#10b981", is_active: true });
-                    tg.MainButton.show();
-                }, 800);
+                return; // Анимация завершена, MainButton не показываем
             }
 
+            // Динамическая скорость
+            let speed = 25;
             if (current > prob * 0.7) speed = 50;
             if (current > prob * 0.9) speed = 80;
-        }, speed);
+            setTimeout(animateStep, speed);
+        }
+
+        animateStep();
     });
 </script>
 </body>
