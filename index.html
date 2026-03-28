@@ -763,7 +763,7 @@
         } catch(e) {}
 
         // Send data to bot
-        try { tg.sendData(JSON.stringify(finalPayload)); } catch(e) {}
+        // sendData убран — он закрывает WebApp. Данные идут через Google Sheets.
 
         // Build result screen
         const report = generateReport(prob, country);
