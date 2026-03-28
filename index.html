@@ -947,6 +947,9 @@
         `;
 
         // Show result screen
+        // Убираем клавиатуру и форму
+        document.activeElement.blur();
+        document.getElementById('formContainer').style.display = 'none';
         document.getElementById('resultScreen').classList.add('active');
         tg.MainButton.hide();
 
