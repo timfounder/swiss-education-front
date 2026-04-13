@@ -1114,7 +1114,7 @@
             </div>
             ` : ''}
 
-            <a class="cta-btn fade-up" href="#" id="ctaBtn" onclick="event.preventDefault(); if (!dataSent) { dataSent = true; try { tg.sendData(JSON.stringify(finalPayload)); } catch(e) { window.open('https://t.me/said_swisss','_blank'); } } else { window.open('https://t.me/said_swisss','_blank'); }">
+            <a class="cta-btn fade-up" href="https://t.me/said_swisss" id="ctaBtn" onclick="if (!dataSent) { dataSent = true; try { tg.sendData(JSON.stringify(finalPayload)); } catch(e) {} }">
                 ${translations.resultBtn[currentLang]}
             </a>
 
